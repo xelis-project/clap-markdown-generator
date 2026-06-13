@@ -62,7 +62,7 @@ fn main() {
 }
 ```
 
-The output contains stable HTML anchors for each parameter:
+The output contains stable HTML anchors for each parameter. The parameter list uses only the first line of each parameter description as its summary, while the detailed parameter section keeps the full description.
 
 ```markdown
 # `example`

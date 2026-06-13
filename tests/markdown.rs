@@ -90,6 +90,21 @@ fn generated_help_and_version_actions_are_not_documented() {
 }
 
 #[test]
+fn parameter_summary_uses_only_the_first_comment_line() {
+    let markdown = generate_markdown_for_command(
+        Command::new("app").arg(
+            Arg::new("config")
+                .long("config")
+                .help("First line summary.\n\nSecond line with more details."),
+        ),
+    );
+
+    assert!(markdown.contains("- [`--config`](#app-config): First line summary."));
+    assert!(markdown.contains("First line summary.\n\nSecond line with more details."));
+    assert!(!markdown.contains("- [`--config`](#app-config): Second line with more details."));
+}
+
+#[test]
 fn options_can_hide_toc_hidden_items_and_subcommands() {
     let command = Command::new("app")
         .arg(Arg::new("public").long("public"))

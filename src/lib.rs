@@ -128,8 +128,10 @@ impl MarkdownRenderer {
                     parameter.anchor
                 ));
 
-                if let Some(description) = &parameter.description {
-                    output.push_str(&format!(": {}", first_line(description)));
+                if let Some(description) = &parameter.description
+                    && let Some(summary) = summary_line(description)
+                {
+                    output.push_str(&format!(": {}", summary));
                 }
 
                 output.push('\n');
@@ -151,8 +153,10 @@ impl MarkdownRenderer {
                 let anchor = slugify(&subcommand_path.join("-"));
                 output.push_str(&format!("<a id=\"{}\"></a>\n", anchor));
                 output.push_str(&format!("- [`{}`](#{})", subcommand.get_name(), anchor));
-                if let Some(description) = command_description(subcommand) {
-                    output.push_str(&format!(": {}", first_line(&description)));
+                if let Some(description) = command_description(subcommand)
+                    && let Some(summary) = summary_line(&description)
+                {
+                    output.push_str(&format!(": {}", summary));
                 }
                 output.push('\n');
             }
@@ -402,8 +406,11 @@ fn normalize_description(description: String) -> String {
     description.trim().to_owned()
 }
 
-fn first_line(description: &str) -> &str {
-    description.lines().next().unwrap_or(description)
+fn summary_line(description: &str) -> Option<&str> {
+    description
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
 }
 
 fn yes_no(value: bool) -> &'static str {
