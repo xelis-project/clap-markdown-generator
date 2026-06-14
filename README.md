@@ -1,14 +1,14 @@
-# clap-markdown
+# clap-markdown-generator
 
 Generate Markdown documentation from [`clap`](https://docs.rs/clap) command definitions.
 
-`clap-markdown` is useful when a CLI parser is already the source of truth and you want reference documentation for every available parameter without maintaining a second hand-written list. The generated Markdown includes anchors, descriptions, default values, environment variables, possible values, required/value metadata, and recursive subcommand sections.
+`clap-markdown-generator` is useful when a CLI parser is already the source of truth and you want reference documentation for every available parameter without maintaining a second hand-written list. The generated Markdown includes anchors, descriptions, default values, environment variables, possible values, required/value metadata, and recursive subcommand sections.
 
 ## Installation
 
 ```toml
 [dependencies]
-clap-markdown = "0.1"
+clap-markdown-generator = "0.1"
 ```
 
 Your CLI type should use `clap` as usual:
@@ -16,7 +16,7 @@ Your CLI type should use `clap` as usual:
 ```toml
 [dependencies]
 clap = { version = "4.5", features = ["derive", "env"] }
-clap-markdown = "0.1"
+clap-markdown-generator = "0.1"
 ```
 
 ## Usage
@@ -57,7 +57,7 @@ enum Commands {
 }
 
 fn main() {
-    let markdown = clap_markdown::generate_markdown::<Cli>();
+    let markdown = clap_markdown_generator::generate_markdown::<Cli>();
     println!("{markdown}");
 }
 ```
@@ -134,20 +134,20 @@ RPC bind address
 Use `generate_markdown::<T>()` for a type that derives `clap::Parser` or otherwise implements `clap::CommandFactory`.
 
 ```rust
-let markdown = clap_markdown::generate_markdown::<Cli>();
+let markdown = clap_markdown_generator::generate_markdown::<Cli>();
 ```
 
 Use `generate_markdown_for_command` when you already have a `clap::Command`.
 
 ```rust
 let command = <Cli as clap::CommandFactory>::command();
-let markdown = clap_markdown::generate_markdown_for_command(command);
+let markdown = clap_markdown_generator::generate_markdown_for_command(command);
 ```
 
 Use `generate_markdown_for_command_with_options` to customize rendering.
 
 ```rust
-use clap_markdown::{
+use clap_markdown_generator::{
     CommandHeadingStyle, MarkdownOptions, ParameterContentStyle, ParameterHeadingStyle,
     SummaryEntryStyle, SummaryOptions, SummaryValueStyle,
     generate_markdown_for_command_with_options,
@@ -304,7 +304,7 @@ MarkdownOptions {
 }
 ```
 
-`clap-markdown` filters clap-generated help and version actions from the output so the documentation focuses on user-defined CLI parameters.
+`clap-markdown-generator` filters clap-generated help and version actions from the output so the documentation focuses on user-defined CLI parameters.
 
 ## Development
 

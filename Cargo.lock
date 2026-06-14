@@ -63,7 +63,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap-markdown"
+name = "clap-markdown-generator"
 version = "0.1.0"
 dependencies = [
  "clap",

@@ -1,12 +1,12 @@
 [package]
-name = "clap-markdown"
+name = "clap-markdown-generator"
 version = "0.1.0"
 edition = "2024"
 description = "Generate Markdown documentation from clap command definitions."
 readme = "README.md"
-repository = "https://github.com/xelis-project/clap-markdown"
-homepage = "https://github.com/xelis-project/clap-markdown"
-documentation = "https://docs.rs/clap-markdown"
+repository = "https://github.com/xelis-project/clap-markdown-generator"
+homepage = "https://github.com/xelis-project/clap-markdown-generator"
+documentation = "https://docs.rs/clap-markdown-generator"
 keywords = ["clap", "markdown", "cli", "documentation"]
 categories = ["command-line-interface", "development-tools::documentation"]
 

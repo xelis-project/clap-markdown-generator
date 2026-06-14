@@ -14,7 +14,7 @@
 //!     config: String,
 //! }
 //!
-//! let markdown = clap_markdown::generate_markdown::<Cli>();
+//! let markdown = clap_markdown_generator::generate_markdown::<Cli>();
 //! assert!(markdown.contains("--config <CONFIG>"));
 //! assert!(markdown.contains("<a id=\"node-config\"></a>"));
 //! ```

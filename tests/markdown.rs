@@ -1,5 +1,5 @@
 use clap::{Arg, ArgAction, Command, Parser, Subcommand, ValueEnum};
-use clap_markdown::{
+use clap_markdown_generator::{
     CommandHeadingStyle, MarkdownOptions, ParameterContentStyle, ParameterHeadingStyle,
     SummaryEntryStyle, SummaryOptions, SummaryValueStyle, generate_markdown,
     generate_markdown_for_command, generate_markdown_for_command_with_options,
