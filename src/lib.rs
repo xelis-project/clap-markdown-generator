@@ -330,7 +330,7 @@ impl fmt::Debug for ParameterContentStyle {
 
 #[derive(Debug, Clone, Copy)]
 pub struct ParameterContentOptions {
-    include_usage: bool,
+    pub include_usage: bool,
 }
 
 /// Generate Markdown for an existing [`clap::Command`] with explicit options.
