@@ -52,6 +52,8 @@ pub struct MarkdownOptions {
     pub skip_parameter_details: bool,
     /// Include explicit HTML anchor id elements before parameters and subcommands.
     pub include_html_anchors: bool,
+    /// Include a parameter usage line in detailed parameter content.
+    pub include_usage: bool,
     /// Controls how command headings are rendered.
     pub command_heading: CommandHeadingStyle,
     /// Controls how the parameter summary is rendered.
@@ -70,6 +72,7 @@ impl Default for MarkdownOptions {
             include_toc: true,
             skip_parameter_details: false,
             include_html_anchors: true,
+            include_usage: true,
             command_heading: CommandHeadingStyle::Display,
             summary: SummaryOptions::default(),
             parameter_heading: ParameterHeadingStyle::Display,
@@ -428,6 +431,12 @@ impl MarkdownRenderer {
     fn render_parameter_table(&self, parameter: &ParameterInfo, output: &mut String) {
         output.push_str("| Field | Value |\n");
         output.push_str("| --- | --- |\n");
+        if self.options.include_usage {
+            output.push_str(&format!(
+                "| Usage | `{}` |\n",
+                escape_table_cell(&parameter.display)
+            ));
+        }
         output.push_str(&format!("| Required | {} |\n", yes_no(parameter.required)));
         output.push_str(&format!(
             "| Value | {} |\n",
@@ -489,6 +498,13 @@ impl MarkdownRenderer {
                 if parameter.takes_value { "Yes" } else { "No" }
             ),
         ];
+
+        if self.options.include_usage {
+            parts.push(format!(
+                "Usage: `{}`.",
+                escape_markdown_text(&parameter.display)
+            ));
+        }
 
         if !parameter.value_names.is_empty() {
             parts.push(format!(

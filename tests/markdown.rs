@@ -88,7 +88,7 @@ Path to the configuration file
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-config` |
+| Usage | `-c <CONFIG>, --config <CONFIG>` |
 | Required | No |
 | Value | Yes |
 | Value name | `CONFIG` |
@@ -102,7 +102,7 @@ Network to connect to
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-network` |
+| Usage | `--network <NETWORK>` |
 | Required | No |
 | Value | Yes |
 | Value name | `NETWORK` |
@@ -129,7 +129,7 @@ RPC bind address
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-daemon-rpc-bind` |
+| Usage | `--rpc-bind <RPC_BIND>` |
 | Required | No |
 | Value | Yes |
 | Value name | `RPC_BIND` |
@@ -148,7 +148,6 @@ fn parser_type_renders_parameter_metadata_and_anchors() {
     assert!(markdown.contains("<a id=\"example-config\"></a>"));
     assert!(markdown.contains("### `-c <CONFIG>, --config <CONFIG>`"));
     assert!(markdown.contains("Path to the configuration file"));
-    assert!(markdown.contains("| Anchor | `#example-config` |"));
     assert!(markdown.contains("| Default value | `config.toml` |"));
     assert!(markdown.contains("| Environment | `EXAMPLE_CONFIG` |"));
 }
@@ -293,9 +292,26 @@ fn options_can_hide_html_anchor_ids() {
 
     assert!(!markdown.contains("<a id="));
     assert!(markdown.contains("- [`--config`](#app-config)"));
-    assert!(markdown.contains("| Anchor | `#app-config` |"));
     assert!(markdown.contains("- [`run`](#app-run)"));
-    assert!(markdown.contains("| Anchor | `#app-run-threads` |"));
+}
+
+#[test]
+fn options_can_hide_parameter_usage_content() {
+    let markdown = generate_markdown_for_command_with_options(
+        Command::new("app").arg(
+            Arg::new("config")
+                .long("config")
+                .value_name("CONFIG")
+                .help("Config path"),
+        ),
+        MarkdownOptions {
+            include_usage: false,
+            ..MarkdownOptions::default()
+        },
+    );
+
+    assert!(markdown.contains("### `--config <CONFIG>`"));
+    assert!(!markdown.contains("| Usage | `--config <CONFIG>` |"));
 }
 
 #[test]
@@ -470,6 +486,6 @@ fn parameter_content_can_render_as_text() {
 
     assert!(!markdown.contains("| Field | Value |"));
     assert!(markdown.contains(
-        "Anchor: `#app-config`. Required: No. Value: Yes. Value name: `CONFIG`. Default value: `config.toml`. Environment: `APP_CONFIG`."
+        "Required: No. Value: Yes. Usage: `--config <CONFIG>`. Value name: `CONFIG`. Default value: `config.toml`. Environment: `APP_CONFIG`."
     ));
 }

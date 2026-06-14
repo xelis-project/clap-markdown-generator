@@ -81,7 +81,7 @@ Path to the configuration file
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-config` |
+| Usage | `-c <CONFIG>, --config <CONFIG>` |
 | Required | No |
 | Value | Yes |
 | Value name | `CONFIG` |
@@ -95,7 +95,7 @@ Network to connect to
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-network` |
+| Usage | `--network <NETWORK>` |
 | Required | No |
 | Value | Yes |
 | Value name | `NETWORK` |
@@ -122,7 +122,7 @@ RPC bind address
 
 | Field | Value |
 | --- | --- |
-| Anchor | `#example-daemon-rpc-bind` |
+| Usage | `--rpc-bind <RPC_BIND>` |
 | Required | No |
 | Value | Yes |
 | Value name | `RPC_BIND` |
@@ -161,6 +161,7 @@ let markdown = generate_markdown_for_command_with_options(
         include_toc: true,
         skip_parameter_details: false,
         include_html_anchors: true,
+        include_usage: true,
         command_heading: CommandHeadingStyle::Display,
         summary: SummaryOptions {
             enabled: true,
@@ -183,6 +184,7 @@ let markdown = generate_markdown_for_command_with_options(
 | `include_toc` | `true` | Include the parameter summary section. |
 | `skip_parameter_details` | `false` | Skip the detailed parameter sections like `### --config <CONFIG>`. |
 | `include_html_anchors` | `true` | Include explicit HTML anchor id elements like `<a id="example-config"></a>`. |
+| `include_usage` | `true` | Include usage content like `Usage: --config <CONFIG>` in detailed parameter sections. |
 | `command_heading` | `Display` | Render command headings with the default full command path, skip them, or use a callback. |
 | `summary` | names + values + descriptions | Configure whether the parameter summary is enabled, whether it shows only names or names plus values, whether it includes the first description line, or use a callback for each entry. |
 | `parameter_heading` | `Display` | Render detailed parameter headings as the full display form, the clap argument name, or a callback. |
