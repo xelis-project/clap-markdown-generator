@@ -167,6 +167,15 @@ impl CommandHeadingStyle {
     pub fn custom(formatter: impl Fn(&CommandInfo) -> String + Send + Sync + 'static) -> Self {
         Self::Custom(Arc::new(formatter))
     }
+
+    /// Render a command heading for the given command.
+    pub fn render(&self, command: &CommandInfo) -> String {
+        match self {
+            Self::Display => format!("`{}`", escape_markdown_text(&command.display)),
+            Self::None => String::new(),
+            Self::Custom(formatter) => formatter(command),
+        }
+    }
 }
 
 impl fmt::Debug for CommandHeadingStyle {
@@ -195,6 +204,22 @@ impl SummaryEntryStyle {
     /// Create a custom summary entry callback.
     pub fn custom(formatter: impl Fn(&ParameterInfo) -> String + Send + Sync + 'static) -> Self {
         Self::Custom(Arc::new(formatter))
+    }
+
+    /// Render a summary entry for the given parameter.
+    pub fn render(&self, parameter: &ParameterInfo, options: &SummaryOptions, output: &mut String) {
+        match self {
+            Self::Default => render_default_summary_entry(parameter, options, output),
+            Self::Custom(formatter) => {
+                let entry = formatter(parameter);
+                if !entry.is_empty() {
+                    output.push_str(&entry);
+                    if !entry.ends_with('\n') {
+                        output.push('\n');
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -234,6 +259,17 @@ impl ParameterHeadingStyle {
     pub fn custom(formatter: impl Fn(&ParameterInfo) -> String + Send + Sync + 'static) -> Self {
         Self::Custom(Arc::new(formatter))
     }
+
+    /// Render a parameter heading for the given parameter.
+    pub fn render(&self, parameter: &ParameterInfo) -> String {
+        match self {
+            Self::Display => {
+                format!("`{}`", escape_markdown_text(&parameter.display))
+            }
+            Self::Name => parameter.name.clone(),
+            Self::Custom(formatter) => formatter(parameter),
+        }
+    }
 }
 
 impl fmt::Debug for ParameterHeadingStyle {
@@ -264,6 +300,22 @@ impl ParameterContentStyle {
     pub fn custom(formatter: impl Fn(&ParameterInfo) -> String + Send + Sync + 'static) -> Self {
         Self::Custom(Arc::new(formatter))
     }
+
+    /// Render the parameter content for the given parameter.
+    pub fn render(
+        &self,
+        parameter: &ParameterInfo,
+        options: &ParameterContentOptions,
+        output: &mut String,
+    ) {
+        match self {
+            Self::Table => render_parameter_table(parameter, options, output),
+            Self::Text => render_parameter_text(parameter, options, output),
+            Self::Custom(formatter) => {
+                push_custom_block(output, &formatter(parameter));
+            }
+        }
+    }
 }
 
 impl fmt::Debug for ParameterContentStyle {
@@ -274,6 +326,11 @@ impl fmt::Debug for ParameterContentStyle {
             Self::Custom(_) => formatter.write_str("Custom(<callback>)"),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct ParameterContentOptions {
+    include_usage: bool,
 }
 
 /// Generate Markdown for an existing [`clap::Command`] with explicit options.
@@ -310,7 +367,7 @@ impl MarkdownRenderer {
         output: &mut String,
     ) {
         let command_info = command_info(command, command_path, heading_level);
-        let command_heading = self.command_heading(&command_info);
+        let command_heading = self.options.command_heading.render(&command_info);
         if !command_heading.is_empty() {
             push_heading(output, heading_level, &command_heading);
         }
@@ -373,7 +430,7 @@ impl MarkdownRenderer {
         if self.options.include_html_anchors {
             output.push_str(&format!("<a id=\"{}\"></a>\n", parameter.anchor));
         }
-        let heading = self.parameter_heading(parameter);
+        let heading = self.options.parameter_heading.render(parameter);
         if !heading.is_empty() {
             push_heading(output, heading_level, &heading);
         }
@@ -383,175 +440,20 @@ impl MarkdownRenderer {
             output.push_str("\n\n");
         }
 
-        match &self.options.parameter_content {
-            ParameterContentStyle::Table => self.render_parameter_table(parameter, output),
-            ParameterContentStyle::Text => self.render_parameter_text(parameter, output),
-            ParameterContentStyle::Custom(formatter) => {
-                push_custom_block(output, &formatter(parameter));
-            }
-        }
+        self.options.parameter_content.render(
+            parameter,
+            &ParameterContentOptions {
+                include_usage: self.options.include_usage,
+            },
+            output,
+        );
     }
 
     fn render_summary_entry(&self, parameter: &ParameterInfo, output: &mut String) {
-        match &self.options.summary.entry {
-            SummaryEntryStyle::Default => self.render_default_summary_entry(parameter, output),
-            SummaryEntryStyle::Custom(formatter) => {
-                let entry = formatter(parameter);
-                if !entry.is_empty() {
-                    output.push_str(&entry);
-                    if !entry.ends_with('\n') {
-                        output.push('\n');
-                    }
-                }
-            }
-        }
-    }
-
-    fn render_default_summary_entry(&self, parameter: &ParameterInfo, output: &mut String) {
-        let summary_display = match self.options.summary.value_style {
-            SummaryValueStyle::NamesOnly => &parameter.display_names,
-            SummaryValueStyle::NamesAndValues => &parameter.display,
-        };
-        output.push_str(&format!(
-            "- [`{}`](#{})",
-            escape_markdown_text(summary_display),
-            parameter.anchor
-        ));
-
-        if self.options.summary.include_description
-            && let Some(description) = &parameter.description
-            && let Some(summary) = summary_line(description)
-        {
-            output.push_str(&format!(": {}", summary));
-        }
-
-        output.push('\n');
-    }
-
-    fn render_parameter_table(&self, parameter: &ParameterInfo, output: &mut String) {
-        output.push_str("| Field | Value |\n");
-        output.push_str("| --- | --- |\n");
-        if self.options.include_usage {
-            output.push_str(&format!(
-                "| Usage | `{}` |\n",
-                escape_table_cell(&parameter.display)
-            ));
-        }
-        output.push_str(&format!("| Required | {} |\n", yes_no(parameter.required)));
-        output.push_str(&format!(
-            "| Value | {} |\n",
-            if parameter.takes_value { "Yes" } else { "No" }
-        ));
-
-        if !parameter.value_names.is_empty() {
-            output.push_str(&format!(
-                "| Value name | {} |\n",
-                parameter
-                    .value_names
-                    .iter()
-                    .map(|value| format!("`{}`", escape_table_cell(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        if parameter.multiple {
-            output.push_str("| Multiple | Yes |\n");
-        }
-
-        if !parameter.default_values.is_empty() {
-            output.push_str(&format!(
-                "| Default value | {} |\n",
-                parameter
-                    .default_values
-                    .iter()
-                    .map(|value| format!("`{}`", escape_table_cell(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        if let Some(env) = &parameter.env {
-            output.push_str(&format!("| Environment | `{}` |\n", escape_table_cell(env)));
-        }
-
-        if !parameter.possible_values.is_empty() {
-            output.push_str(&format!(
-                "| Possible values | {} |\n",
-                parameter
-                    .possible_values
-                    .iter()
-                    .map(|value| format!("`{}`", escape_table_cell(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        output.push('\n');
-    }
-
-    fn render_parameter_text(&self, parameter: &ParameterInfo, output: &mut String) {
-        let mut parts = vec![
-            format!("Required: {}.", yes_no(parameter.required)),
-            format!(
-                "Value: {}.",
-                if parameter.takes_value { "Yes" } else { "No" }
-            ),
-        ];
-
-        if self.options.include_usage {
-            parts.push(format!(
-                "Usage: `{}`.",
-                escape_markdown_text(&parameter.display)
-            ));
-        }
-
-        if !parameter.value_names.is_empty() {
-            parts.push(format!(
-                "Value name: {}.",
-                parameter
-                    .value_names
-                    .iter()
-                    .map(|value| format!("`{}`", escape_markdown_text(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        if parameter.multiple {
-            parts.push("Multiple: Yes.".to_owned());
-        }
-
-        if !parameter.default_values.is_empty() {
-            parts.push(format!(
-                "Default value: {}.",
-                parameter
-                    .default_values
-                    .iter()
-                    .map(|value| format!("`{}`", escape_markdown_text(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        if let Some(env) = &parameter.env {
-            parts.push(format!("Environment: `{}`.", escape_markdown_text(env)));
-        }
-
-        if !parameter.possible_values.is_empty() {
-            parts.push(format!(
-                "Possible values: {}.",
-                parameter
-                    .possible_values
-                    .iter()
-                    .map(|value| format!("`{}`", escape_markdown_text(value)))
-                    .collect::<Vec<_>>()
-                    .join(", ")
-            ));
-        }
-
-        output.push_str(&parts.join(" "));
-        output.push_str("\n\n");
+        self.options
+            .summary
+            .entry
+            .render(parameter, &self.options.summary, output);
     }
 
     fn collect_parameters(&self, command: &Command, command_path: &[String]) -> Vec<ParameterInfo> {
@@ -574,24 +476,165 @@ impl MarkdownRenderer {
             .filter(|subcommand| self.options.include_hidden || !subcommand.is_hide_set())
             .collect()
     }
+}
 
-    fn command_heading(&self, command: &CommandInfo) -> String {
-        match &self.options.command_heading {
-            CommandHeadingStyle::Display => format!("`{}`", escape_markdown_text(&command.display)),
-            CommandHeadingStyle::None => String::new(),
-            CommandHeadingStyle::Custom(formatter) => formatter(command),
-        }
+fn render_default_summary_entry(
+    parameter: &ParameterInfo,
+    options: &SummaryOptions,
+    output: &mut String,
+) {
+    let summary_display = match options.value_style {
+        SummaryValueStyle::NamesOnly => &parameter.display_names,
+        SummaryValueStyle::NamesAndValues => &parameter.display,
+    };
+    output.push_str(&format!(
+        "- [`{}`](#{})",
+        escape_markdown_text(summary_display),
+        parameter.anchor
+    ));
+
+    if options.include_description
+        && let Some(description) = &parameter.description
+        && let Some(summary) = summary_line(description)
+    {
+        output.push_str(&format!(": {}", summary));
     }
 
-    fn parameter_heading(&self, parameter: &ParameterInfo) -> String {
-        match &self.options.parameter_heading {
-            ParameterHeadingStyle::Display => {
-                format!("`{}`", escape_markdown_text(&parameter.display))
-            }
-            ParameterHeadingStyle::Name => parameter.name.clone(),
-            ParameterHeadingStyle::Custom(formatter) => formatter(parameter),
-        }
+    output.push('\n');
+}
+
+fn render_parameter_table(
+    parameter: &ParameterInfo,
+    options: &ParameterContentOptions,
+    output: &mut String,
+) {
+    output.push_str("| Field | Value |\n");
+    output.push_str("| --- | --- |\n");
+    if options.include_usage {
+        output.push_str(&format!(
+            "| Usage | `{}` |\n",
+            escape_table_cell(&parameter.display)
+        ));
     }
+    output.push_str(&format!("| Required | {} |\n", yes_no(parameter.required)));
+    output.push_str(&format!(
+        "| Value | {} |\n",
+        if parameter.takes_value { "Yes" } else { "No" }
+    ));
+
+    if !parameter.value_names.is_empty() {
+        output.push_str(&format!(
+            "| Value name | {} |\n",
+            parameter
+                .value_names
+                .iter()
+                .map(|value| format!("`{}`", escape_table_cell(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    if parameter.multiple {
+        output.push_str("| Multiple | Yes |\n");
+    }
+
+    if !parameter.default_values.is_empty() {
+        output.push_str(&format!(
+            "| Default value | {} |\n",
+            parameter
+                .default_values
+                .iter()
+                .map(|value| format!("`{}`", escape_table_cell(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    if let Some(env) = &parameter.env {
+        output.push_str(&format!("| Environment | `{}` |\n", escape_table_cell(env)));
+    }
+
+    if !parameter.possible_values.is_empty() {
+        output.push_str(&format!(
+            "| Possible values | {} |\n",
+            parameter
+                .possible_values
+                .iter()
+                .map(|value| format!("`{}`", escape_table_cell(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    output.push('\n');
+}
+
+fn render_parameter_text(
+    parameter: &ParameterInfo,
+    options: &ParameterContentOptions,
+    output: &mut String,
+) {
+    let mut parts = vec![
+        format!("Required: {}.", yes_no(parameter.required)),
+        format!(
+            "Value: {}.",
+            if parameter.takes_value { "Yes" } else { "No" }
+        ),
+    ];
+
+    if options.include_usage {
+        parts.push(format!(
+            "Usage: `{}`.",
+            escape_markdown_text(&parameter.display)
+        ));
+    }
+
+    if !parameter.value_names.is_empty() {
+        parts.push(format!(
+            "Value name: {}.",
+            parameter
+                .value_names
+                .iter()
+                .map(|value| format!("`{}`", escape_markdown_text(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    if parameter.multiple {
+        parts.push("Multiple: Yes.".to_owned());
+    }
+
+    if !parameter.default_values.is_empty() {
+        parts.push(format!(
+            "Default value: {}.",
+            parameter
+                .default_values
+                .iter()
+                .map(|value| format!("`{}`", escape_markdown_text(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    if let Some(env) = &parameter.env {
+        parts.push(format!("Environment: `{}`.", escape_markdown_text(env)));
+    }
+
+    if !parameter.possible_values.is_empty() {
+        parts.push(format!(
+            "Possible values: {}.",
+            parameter
+                .possible_values
+                .iter()
+                .map(|value| format!("`{}`", escape_markdown_text(value)))
+                .collect::<Vec<_>>()
+                .join(", ")
+        ));
+    }
+
+    output.push_str(&parts.join(" "));
+    output.push_str("\n\n");
 }
 
 fn command_info(command: &Command, command_path: &[String], heading_level: usize) -> CommandInfo {
