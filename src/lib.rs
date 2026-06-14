@@ -428,7 +428,6 @@ impl MarkdownRenderer {
     fn render_parameter_table(&self, parameter: &ParameterInfo, output: &mut String) {
         output.push_str("| Field | Value |\n");
         output.push_str("| --- | --- |\n");
-        output.push_str(&format!("| Anchor | `#{}` |\n", parameter.anchor));
         output.push_str(&format!("| Required | {} |\n", yes_no(parameter.required)));
         output.push_str(&format!(
             "| Value | {} |\n",
@@ -484,7 +483,6 @@ impl MarkdownRenderer {
 
     fn render_parameter_text(&self, parameter: &ParameterInfo, output: &mut String) {
         let mut parts = vec![
-            format!("Anchor: `#{}`.", parameter.anchor),
             format!("Required: {}.", yes_no(parameter.required)),
             format!(
                 "Value: {}.",
