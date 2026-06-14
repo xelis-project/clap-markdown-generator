@@ -9,6 +9,7 @@ homepage = "https://github.com/xelis-project/clap-markdown-generator"
 documentation = "https://docs.rs/clap-markdown-generator"
 keywords = ["clap", "markdown", "cli", "documentation"]
 categories = ["command-line-interface", "development-tools::documentation"]
+license = "MIT"
 
 [dependencies]
 clap = { version = "4.5", features = ["derive", "env"] }
